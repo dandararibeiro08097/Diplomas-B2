@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diplomas B2 | Validação de Diplomas</title>
+<style>
+* { box-sizing: border-box; }
+body {
+margin: 0;
+font-family: Arial, sans-serif;
+background: #f4f6fa;
+color: #1d2b45;
+}
+header {
+background: #142b4a;
+color: white;
+padding: 28px 20px;
+text-align: center;
+}
+header h1 { margin: 0 0 8px; }
+main {
+max-width: 700px;
+margin: 45px auto;
+padding: 0 18px;
+}
+.painel {
+background: white;
+padding: 28px;
+border-radius: 12px;
+box-shadow: 0 4px 18px #00000010;
+}
+input {
+width: 100%;
+padding: 14px;
+margin: 12px 0;
+border: 1px solid #ccd3df;
+border-radius: 7px;
+font-size: 16px;
+}
+button {
+width: 100%;
+padding: 14px;
+border: 0;
+border-radius: 7px;
+background: #1766a8;
+color: white;
+font-size: 16px;
+font-weight: bold;
+}
+#resultado { margin-top: 20px; }
+footer {
+text-align: center;
+color: #68758a;
+padding: 25px;
+font-size: 13px;
+}
+</style>
+</head>
+<body>
+<header>
+<h1>Diplomas B2</h1>
+<p>Portal de consulta e validação de diplomas</p>
+</header>
+
+<main>
+<section class="painel">
+<h2>Consultar diploma</h2>
+<p>Digite o código de validação informado no documento.</p>
+<input id="codigo" type="text" placeholder="Ex.: B2-000001">
+<button onclick="consultar()">Consultar documento</button>
+<div id="resultado"></div>
+</section>
+</main>
+
+<footer>
+Diplomas B2 — Portal de consulta
+</footer>
+
+<script>
+function consultar() {
+const codigo = document.getElementById("codigo").value.trim();
+const resultado = document.getElementById("resultado");
+
+if (!codigo) {
+resultado.textContent = "Digite um código para consultar.";
+return;
+}
+
+resultado.textContent =
+"Consulta recebida. O sistema de validação será conectado ao cadastro de diplomas.";
+}
+</script>
+</body>
+</html>
