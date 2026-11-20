@@ -1,95 +1,319 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Diplomas B2 | Validação de Diplomas</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diplomas B2</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style>
-* { box-sizing: border-box; }
-body {
-margin: 0;
-font-family: Arial, sans-serif;
-background: #f4f6fa;
-color: #1d2b45;
-}
-header {
-background: #142b4a;
-color: white;
-padding: 28px 20px;
-text-align: center;
-}
-header h1 { margin: 0 0 8px; }
-main {
-max-width: 700px;
-margin: 45px auto;
-padding: 0 18px;
-}
-.painel {
-background: white;
-padding: 28px;
-border-radius: 12px;
-box-shadow: 0 4px 18px #00000010;
-}
-input {
-width: 100%;
-padding: 14px;
-margin: 12px 0;
-border: 1px solid #ccd3df;
-border-radius: 7px;
-font-size: 16px;
-}
-button {
-width: 100%;
-padding: 14px;
-border: 0;
-border-radius: 7px;
-background: #1766a8;
-color: white;
-font-size: 16px;
-font-weight: bold;
-}
-#resultado { margin-top: 20px; }
-footer {
-text-align: center;
-color: #68758a;
-padding: 25px;
-font-size: 13px;
-}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f3f5f9;color:#1b2b45}
+header{background:#142b4a;color:white;padding:28px 18px;text-align:center}
+header h1{margin:0;font-size:29px}
+header p{margin:8px 0 0}
+main{max-width:760px;margin:30px auto;padding:0 15px}
+.card{background:white;padding:24px;border-radius:12px;margin-bottom:20px;box-shadow:0 3px 15px #0001}
+h2{margin-top:0}
+input,button{width:100%;padding:13px;margin:7px 0;border-radius:7px;font-size:16px}
+input{border:1px solid #ccd3df}
+button{border:0;background:#1766a8;color:white;font-weight:bold;cursor:pointer}
+button.secondary{background:#52647b}
+button.success{background:#21834c}
+button.danger{background:#9b3540}
+.result{padding:15px;margin-top:15px;border-radius:8px;background:#eef3f9;overflow-wrap:anywhere}
+.hidden{display:none}
+small{color:#65738a}
+footer{text-align:center;padding:25px;color:#68758a;font-size:13px}
 </style>
 </head>
+
 <body>
+
 <header>
 <h1>Diplomas B2</h1>
 <p>Portal de consulta e validação de diplomas</p>
 </header>
 
 <main>
-<section class="painel">
+
+<section class="card">
 <h2>Consultar diploma</h2>
-<p>Digite o código de validação informado no documento.</p>
-<input id="codigo" type="text" placeholder="Ex.: B2-000001">
-<button onclick="consultar()">Consultar documento</button>
-<div id="resultado"></div>
+<p>Informe o código de validação do documento.</p>
+<input id="codigoConsulta" placeholder="Ex.: B2-A1B2C3D4">
+<button onclick="consultarDiploma()">Consultar documento</button>
+<div id="resultadoConsulta"></div>
 </section>
+
+<section class="card" id="loginArea">
+<h2>Área administrativa</h2>
+<p>Acesso exclusivo para administradores.</p>
+<input id="email" type="email" placeholder="Seu e-mail">
+<input id="senha" type="password" placeholder="Sua senha">
+<button onclick="entrar()">Entrar</button>
+<div id="mensagemLogin"></div>
+</section>
+
+<section class="card hidden" id="painelAdmin">
+<h2>Painel administrativo</h2>
+<p>Cadastro e gerenciamento de diplomas.</p>
+
+<button class="secondary" onclick="sair()">Sair da administração</button>
+
+<hr>
+
+<h3>Cadastrar novo diploma</h3>
+
+<input id="nome" placeholder="Nome completo do titular">
+<input id="curso" placeholder="Nome do curso">
+<input id="instituicao" placeholder="Instituição emissora">
+<label>Data de emissão</label>
+<input id="dataEmissao" type="date">
+
+<button onclick="cadastrarDiploma()">Cadastrar diploma</button>
+<div id="mensagemCadastro"></div>
+
+<hr>
+
+<h3>Diplomas cadastrados</h3>
+<button class="secondary" onclick="listarDiplomas()">Atualizar lista</button>
+<div id="listaDiplomas"></div>
+</section>
+
 </main>
 
 <footer>
-Diplomas B2 — Portal de consulta
+Diplomas B2 — Portal de consulta de documentos
 </footer>
 
 <script>
-function consultar() {
-const codigo = document.getElementById("codigo").value.trim();
-const resultado = document.getElementById("resultado");
 
-if (!codigo) {
-resultado.textContent = "Digite um código para consultar.";
-return;
+// CONFIGURAÇÃO DO SUPABASE
+const SUPABASE_URL = "COLE_SUA_API_URL_AQUI";
+const SUPABASE_KEY = "COLE_SUA_PUBLISHABLE_KEY_AQUI";
+
+const db = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+function mensagem(elemento, texto) {
+  document.getElementById(elemento).textContent = texto;
 }
 
-resultado.textContent =
-"Consulta recebida. O sistema de validação será conectado ao cadastro de diplomas.";
+function escapar(texto) {
+  return String(texto ?? "").replace(/[&<>"']/g, c => ({
+    "&":"&amp;",
+    "<":"&lt;",
+    ">":"&gt;",
+    '"':"&quot;",
+    "'":"&#39;"
+  })[c]);
 }
+
+// CONSULTA PÚBLICA
+async function consultarDiploma() {
+  const codigo = document.getElementById("codigoConsulta").value.trim();
+  const resultado = document.getElementById("resultadoConsulta");
+
+  resultado.textContent = "Consultando...";
+
+  if (!codigo) {
+    resultado.textContent = "Digite um código.";
+    return;
+  }
+
+  const { data, error } = await db.rpc("consultar_diploma", {
+    p_codigo: codigo
+  });
+
+  if (error) {
+    resultado.textContent = "Não foi possível realizar a consulta. Tente novamente.";
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    resultado.textContent =
+      "Nenhum diploma verificado foi encontrado com esse código.";
+    return;
+  }
+
+  const d = data[0];
+
+  resultado.innerHTML = `
+    <div class="result">
+      <h3>Diploma verificado</h3>
+      <p><strong>Código:</strong> ${escapar(d.codigo)}</p>
+      <p><strong>Titular:</strong> ${escapar(d.nome_titular)}</p>
+      <p><strong>Curso:</strong> ${escapar(d.curso)}</p>
+      <p><strong>Instituição:</strong> ${escapar(d.instituicao)}</p>
+      <p><strong>Emissão:</strong> ${escapar(d.data_emissao || "Não informada")}</p>
+      <p><strong>Situação:</strong> Verificado</p>
+    </div>
+  `;
+}
+
+// LOGIN ADMINISTRATIVO
+async function entrar() {
+  const email = document.getElementById("email").value.trim();
+  const senha = document.getElementById("senha").value;
+
+  mensagem("mensagemLogin", "Verificando acesso...");
+
+  const { error } = await db.auth.signInWithPassword({
+    email,
+    password: senha
+  });
+
+  if (error) {
+    mensagem("mensagemLogin", "Não foi possível entrar. Confira e-mail e senha.");
+    return;
+  }
+
+  mensagem("mensagemLogin", "");
+  await verificarSessao();
+}
+
+// VERIFICAR SESSÃO
+async function verificarSessao() {
+  const { data } = await db.auth.getSession();
+  const conectado = !!data.session;
+
+  document.getElementById("loginArea").classList.toggle("hidden", conectado);
+  document.getElementById("painelAdmin").classList.toggle("hidden", !conectado);
+
+  if (conectado) {
+    await listarDiplomas();
+  }
+}
+
+// SAIR
+async function sair() {
+  await db.auth.signOut();
+  document.getElementById("senha").value = "";
+  await verificarSessao();
+}
+
+// GERAR CÓDIGO
+function gerarCodigo() {
+  const parte = crypto.randomUUID().replace(/-/g, "").substring(0, 8);
+  return "B2-" + parte.toUpperCase();
+}
+
+// CADASTRAR DIPLOMA
+async function cadastrarDiploma() {
+  const nome = document.getElementById("nome").value.trim();
+  const curso = document.getElementById("curso").value.trim();
+  const instituicao = document.getElementById("instituicao").value.trim();
+  const dataEmissao = document.getElementById("dataEmissao").value;
+
+  if (!nome || !curso || !instituicao) {
+    mensagem("mensagemCadastro", "Preencha nome, curso e instituição.");
+    return;
+  }
+
+  const codigo = gerarCodigo();
+
+  const { error } = await db.from("diplomas").insert({
+    codigo,
+    nome_titular: nome,
+    curso,
+    instituicao,
+    data_emissao: dataEmissao || null,
+    status: "pendente"
+  });
+
+  if (error) {
+    mensagem("mensagemCadastro", "Erro ao cadastrar. Confira sua conexão e tente novamente.");
+    return;
+  }
+
+  mensagem("mensagemCadastro", "Cadastro realizado! Código: " + codigo + ". Situação: pendente.");
+
+  document.getElementById("nome").value = "";
+  document.getElementById("curso").value = "";
+  document.getElementById("instituicao").value = "";
+  document.getElementById("dataEmissao").value = "";
+
+  await listarDiplomas();
+}
+
+// LISTAR DIPLOMAS
+async function listarDiplomas() {
+  const area = document.getElementById("listaDiplomas");
+  area.textContent = "Carregando...";
+
+  const { data, error } = await db
+    .from("diplomas")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    area.textContent = "Não foi possível carregar os cadastros.";
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    area.textContent = "Nenhum diploma cadastrado.";
+    return;
+  }
+
+  area.innerHTML = "";
+
+  data.forEach(d => {
+    const item = document.createElement("div");
+    item.className = "result";
+
+    item.innerHTML = `
+      <strong>${escapar(d.nome_titular)}</strong>
+      <p>Curso: ${escapar(d.curso)}</p>
+      <p>Instituição: ${escapar(d.instituicao)}</p>
+      <p>Código: ${escapar(d.codigo)}</p>
+      <p>Situação: ${escapar(d.status)}</p>
+      <button class="success" data-id="${escapar(d.id)}"
+        ${d.status === "verificado" ? "disabled" : ""}>
+        Marcar como verificado
+      </button>
+    `;
+
+    item.querySelector("button").addEventListener("click", () => {
+      verificarDiploma(d.id);
+    });
+
+    area.appendChild(item);
+  });
+}
+
+// VERIFICAR DIPLOMA
+async function verificarDiploma(id) {
+  if (!confirm("Você confirmou a autenticidade deste diploma junto à instituição emissora?")) {
+    return;
+  }
+
+  const { error } = await db
+    .from("diplomas")
+    .update({ status: "verificado" })
+    .eq("id", id);
+
+  if (error) {
+    alert("Não foi possível atualizar a situação.");
+    return;
+  }
+
+  alert("Situação atualizada!");
+  await listarDiplomas();
+}
+
+// INICIALIZAÇÃO
+verificarSessao();
+
+db.auth.onAuthStateChange(() => {
+  verificarSessao();
+});
+
 </script>
+
 </body>
 </html>
